@@ -83,6 +83,16 @@ def test_search_by_name_returns_release_with_extractor_uri():
     assert 0.0 <= top.match_confidence <= 1.0
 
 
+def test_releases_tagged_as_news_programme_format():
+    """News is a mediavocab ProgrammeFormat (1.0 moved it off the genre axis)."""
+    from mediavocab import ProgrammeFormat
+    prov = _prov()
+    results = prov.search(Signals(medium=MediaType.RADIO, title="news"),
+                          lang="en-us")
+    assert results
+    assert all(r.work.programme_format == ProgrammeFormat.NEWS for r in results)
+
+
 def test_search_filters_foreign_language():
     """en-us request should not surface pt-PT feeds."""
     prov = _prov()
