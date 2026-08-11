@@ -24,7 +24,7 @@ from ovos_utils.lang import standardize_lang_tag
 from ovos_utils.log import LOG
 from ovos_utils.parse import MatchStrategy, match_one
 
-from mediavocab import MediaType, Release, Signals, StreamMode, Work
+from mediavocab import MediaType, ProgrammeFormat, Release, Signals, StreamMode, Work
 
 from ovos_plugin_manager.templates.media_provider import MediaProvider
 
@@ -118,7 +118,10 @@ class NewsMediaProvider(MediaProvider):
         ``youtube.channel.live//…``) is preserved verbatim for the OCP playback
         layer to resolve.
         """
-        work = Work(title=entry.get("title") or "", media_type=MediaType.RADIO)
+        # News is a structural programme format (mediavocab 1.0 moved it out of
+        # the genre axis); the carrier media type stays RADIO.
+        work = Work(title=entry.get("title") or "", media_type=MediaType.RADIO,
+                    programme_format=ProgrammeFormat.NEWS)
         return Release(
             work=work,
             uri=entry.get("uri") or "",
