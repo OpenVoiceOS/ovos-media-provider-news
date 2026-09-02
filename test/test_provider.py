@@ -121,3 +121,31 @@ def test_search_swallows_errors():
     prov = _prov()
     with patch.object(prov, "_read_db", side_effect=RuntimeError("boom")):
         assert prov.search(Signals(medium=MediaType.RADIO, title="x")) == []
+
+
+def test_music_typed_query_returns_nothing():
+    """A MUSIC browse/search request is outside SERVED_MEDIA -> []."""
+    prov = _prov()
+    assert prov.search(Signals(medium=MediaType.MUSIC)) == []
+    assert prov.search(Signals(medium=MediaType.MUSIC, title="play some music")) == []
+
+
+def test_radio_typed_query_returns_results():
+    prov = _prov()
+    results = prov.search(Signals(medium=MediaType.RADIO), lang="en-us")
+    assert results
+
+
+def test_untyped_browse_returns_low_confidence_results():
+    """A bare browse (no title, no medium) still gets news, but at the
+    browse convention (~0.5), not inflated to a near-1.0 self-match."""
+    prov = _prov()
+    results = prov.search(Signals(), lang="en-us")
+    assert results
+    assert all(r.match_confidence <= 0.7 for r in results)
+
+
+def test_generic_medium_browse_returns_results():
+    prov = _prov()
+    results = prov.search(Signals(medium=MediaType.GENERIC), lang="en-us")
+    assert results

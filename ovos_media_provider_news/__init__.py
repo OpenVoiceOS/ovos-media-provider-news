@@ -45,6 +45,11 @@ class NewsMediaProvider(MediaProvider):
 
     name: ClassVar[str] = "news"
 
+    # every Release this provider builds carries work.media_type == RADIO
+    # (mediavocab has no dedicated NEWS MediaType; news is a ProgrammeFormat
+    # layered on top of the RADIO carrier type, see _entry_to_release).
+    SERVED_MEDIA: ClassVar[Set[MediaType]] = {MediaType.RADIO}
+
     def __init__(self, config: Optional[dict] = None):
         super().__init__(config)
         self.default_feed: Optional[str] = self.config.get("default_feed")
@@ -87,10 +92,27 @@ class NewsMediaProvider(MediaProvider):
     @staticmethod
     def _score(title: str, entry: dict, target_langs: List[str],
                region: Optional[str], base: float = 0.0) -> float:
-        """Relevance 0.0-1.0 for a feed (ported from the skill scorer)."""
+        """Relevance 0.0-1.0 for a feed (ported from the skill scorer).
+
+        A bare browse request (no ``title``) has nothing to fuzzy-match
+        against, so it is not scored as if it did: it sits at the browse
+        convention (``base``, ~0.5) with only the lang/region/default bonuses
+        layered on. Only an actual title match earns the fuzzy-scaled score.
+        """
         score = base
+        if not title:
+            entry_lang = standardize_lang_tag(entry["lang"])
+            entry_langs = {standardize_lang_tag(l)
+                           for l in entry.get("secondary_langs", [])}
+            entry_langs.add(entry_lang)
+            if region and any(l.endswith(f"-{region.lower()}") for l in entry_langs):
+                score += 0.10
+            if entry.get("is_default"):
+                score += 0.05
+            return max(0.0, min(score, 1.0))
+
         _, alias_score = match_one(
-            title or entry["title"],
+            title,
             entry.get("aliases") or [entry["title"]],
             strategy=MatchStrategy.TOKEN_SORT_RATIO)
         score += alias_score * 0.5
@@ -144,18 +166,26 @@ class NewsMediaProvider(MediaProvider):
         confidence.
 
         A bare NEWS request (no title) browses the catalog (default feeds
-        float to the top). Returns ``[]`` on failure.
+        float to the top, at the browse-convention confidence, ~0.5).
+        A query naming a concrete media type outside ``SERVED_MEDIA`` (e.g.
+        MUSIC) cannot be served by this provider and returns ``[]`` — a
+        query with no type (GENERIC/unset) may still legitimately get news.
+        Returns ``[]`` on failure.
         """
+        medium = signals.medium
+        if medium is not None and medium not in (MediaType.GENERIC,) \
+                and medium not in self.SERVED_MEDIA:
+            return []
         try:
             title = (signals.title or "").strip()
             target_langs = [standardize_lang_tag(lang)] if lang else []
-            base = 0.30 if not title else 0.0  # "play the news" → browse boost
+            base = 0.5 if not title else 0.0  # browse convention
 
             results: List[Release] = []
             for entry in self._read_db(target_langs):
                 score = self._score(title, entry, target_langs, region,
                                     base=base)
-                if score <= 0.5:
+                if score < 0.5:
                     continue
                 results.append(self._entry_to_release(entry, score))
 
