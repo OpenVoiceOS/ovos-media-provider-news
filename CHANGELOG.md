@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.1a7](https://github.com/OpenVoiceOS/ovos-media-provider-news/tree/0.0.1a7) (2026-10-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-media-provider-news/compare/0.0.1a6...0.0.1a7)
+
+**Merged pull requests:**
+
+- Configure Renovate [\#1](https://github.com/OpenVoiceOS/ovos-media-provider-news/pull/1) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [0.0.1a6](https://github.com/OpenVoiceOS/ovos-media-provider-news/tree/0.0.1a6) (2026-09-02)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-media-provider-news/compare/0.0.1a5...0.0.1a6)
